@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>Maya G. shared a clip · Pineapple</title>
+<meta name="theme-color" content="#0A0A0E"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"/>
+<style>
+  /* ─────────── Theme tokens ─────────── */
+  :root, body.theme-dark {
+    --bg: #0A0A0E;
+    --surface: #1C1C24;
+    --surface-2: #252530;
+    --surface-card: #1C1C24;        /* try-card / heavy panels */
+    --border: rgba(255,255,255,0.08);
+    --border-strong: rgba(255,255,255,0.14);
+    --text-1: #F5F5F7;
+    --text-2: #9CA3AF;
+    --text-3: #6B7280;
+    --header-bg: rgba(10,10,14,0.78);
+    --poster-bg-a: #0E0E12;
+    --poster-bg-b: #050508;
+    --footer-border: rgba(255,255,255,0.08);
+    --logo-tile-bg: #FAF8F5;        /* cream sticker for the small icon on dark */
+    --motif-opacity: 0.05;
+    --halo-bg: rgba(246,195,11,0.10);
+    --primary-btn-bg: var(--accent);
+    --primary-btn-fg: #1A1208;
+    --ghost-btn-bg: transparent;
+    --ghost-btn-fg: var(--text-1);
+    --ghost-btn-border: var(--border-strong);
+    --toast-bg: var(--surface);
+    --toast-fg: var(--text-1);
+  }
+
+  body.theme-light {
+    --bg: #FAF8F5;
+    --surface: #FFFFFF;
+    --surface-2: #F2EFE8;
+    --surface-card: #FFFFFF;
+    --border: rgba(28,28,36,0.10);
+    --border-strong: rgba(28,28,36,0.18);
+    --text-1: #1C1C24;
+    --text-2: rgba(28,28,36,0.66);
+    --text-3: rgba(28,28,36,0.42);
+    --header-bg: rgba(250,248,245,0.82);
+    --footer-border: rgba(28,28,36,0.10);
+    --logo-tile-bg: transparent;
+    --motif-opacity: 0.055;
+    --halo-bg: rgba(246,195,11,0.18);
+    --primary-btn-bg: #1C1C24;
+    --primary-btn-fg: #FAF8F5;
+    --ghost-btn-bg: #FFFFFF;
+    --ghost-btn-fg: #1C1C24;
+    --ghost-btn-border: rgba(28,28,36,0.14);
+    --toast-bg: #FFFFFF;
+    --toast-fg: #1C1C24;
+  }
+
+  :root {
+    --accent: #F6C30B;
+    --accent-hover: #FFD431;
+    --accent-muted: rgba(246,195,11,0.12);
+    --green: #2A8939;
+    --green-deep: #1F6B23;
+
+    --font: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, sans-serif;
+    --font-display: 'Manrope', -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+
+    --radius-player: 14px;
+    --radius-btn: 10px;
+
+    --shadow-player: 0 30px 80px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.35);
+    --glow-player: 0 0 120px var(--halo-bg);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  html { background: var(--bg); -webkit-text-size-adjust: 100%; }
+  body {
+    font-family: var(--font);
+    color: var(--text-1);
+    background: var(--bg);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    transition: background-color 220ms ease, color 220ms ease;
+  }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* Ambient brand glow on dark theme only */
+  body.theme-dark::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(at 20% 0%, rgba(246,195,11,0.05) 0%, transparent 45%),
+      radial-gradient(at 80% 100%, rgba(42,137,57,0.04) 0%, transparent 45%);
+    z-index: 0;
+  }
+
+  /* ─────────── Header ─────────── */
+  header.bar {
+    position: sticky; top: 0; z-index: 30;
+    height: 56px;
+    background: var(--header-bg);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+    border-bottom: 1px solid var(--footer-border);
+    transition: background-color 220ms ease, border-color 220ms ease;
+  }
+  @media (min-width: 768px) { header.bar { height: 64px; } }
+  header.bar .inner {
+    height: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 16px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  @media (min-width: 768px) { header.bar .inner { padding: 0 24px; } }
+
+  /* ─────────── Logo lockup (uses actual PNG asset) ─────────── */
+  .lockup { display: inline-flex; align-items: center; gap: 10px; color: var(--text-1); }
+
+  /* Vector-logo system — each placement is an empty <svg data-logo viewBox="...">
+     that the loader fills with the asset's <path> elements. viewBox crops to
+     either the icon, the wordmark, or the full lockup. Wordmark fills are
+     currentColor so they recolor with the theme; letter counter-fills use
+     --logo-counter so they punch through to the local background.            */
+  [data-logo] { display: block; }
+  [data-logo] path { transition: fill 220ms ease; }
+
+  /* Header lockup: icon + wordmark on one row */
+  .lockup .logo-icon { height: 32px; width: auto; flex-shrink: 0; }
+  .lockup .logo-word { height: 14px; width: auto; flex-shrink: 0; }
+  @media (min-width: 768px) {
+    .lockup .logo-icon { height: 38px; }
+    .lockup .logo-word { height: 16px; }
+  }
+  /* The header bar sits over a translucent blur of the page bg, so letter
+     counter-fills match the page bg */
+  header.bar .lockup { --logo-counter: var(--bg); }
+
+  /* ─────────── Buttons ─────────── */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 16px;
+    border-radius: var(--radius-btn);
+    border: 1px solid transparent;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: -0.1px;
+    transition: background 140ms ease, color 140ms ease, border-color 140ms ease, transform 100ms ease;
+    white-space: nowrap;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:active { transform: translateY(0.5px); }
+  .btn:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-muted), 0 0 0 1px var(--accent); }
+
+  .btn-primary {
+    background: var(--primary-btn-bg);
+    color: var(--primary-btn-fg);
+    font-weight: 600;
+  }
+  .btn-primary:hover { filter: brightness(1.05); }
+  body.theme-dark .btn-primary { background: var(--accent); color: #1A1208; }
+  body.theme-dark .btn-primary:hover { background: var(--accent-hover); filter: none; }
+
+  .btn-ghost {
+    background: var(--ghost-btn-bg);
+    color: var(--ghost-btn-fg);
+    border-color: var(--ghost-btn-border);
+  }
+  .btn-ghost:hover {
+    background: var(--surface);
+    border-color: var(--border-strong);
+  }
+
+  .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  .btn-header-cta {
+    height: 36px;
+    padding: 0 14px;
+    font-size: 13px;
+  }
+  @media (min-width: 768px) {
+    .btn-header-cta { height: 38px; padding: 0 16px; font-size: 13.5px; }
+  }
+
+  /* ─────────── Main layout ─────────── */
+  main {
+    flex: 1;
+    width: 100%;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 20px 16px 32px;
+    position: relative;
+    z-index: 1;
+  }
+  @media (min-width: 768px) {
+    main { padding: 32px 24px 48px; }
+  }
+
+  /* ─────────── Video player ─────────── */
+  .player-wrap {
+    position: relative;
+    border-radius: var(--radius-player);
+    overflow: hidden;
+    background: #000;
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    box-shadow: var(--shadow-player), var(--glow-player);
+    isolation: isolate;
+    transition: box-shadow 220ms ease;
+  }
+  .player-wrap::before {
+    content: '';
+    position: absolute; inset: -40px;
+    z-index: -1;
+    background: radial-gradient(60% 60% at 50% 60%, var(--halo-bg) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* Poster — now branded, landing-page-style */
+  .poster {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(120% 80% at 50% 100%, rgba(246,195,11,0.20) 0%, transparent 55%),
+      radial-gradient(60% 80% at 20% 30%, rgba(42,137,57,0.18) 0%, transparent 55%),
+      linear-gradient(180deg, var(--poster-bg-a) 0%, var(--poster-bg-b) 100%);
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+  }
+  /* Diamond motif behind everything, ~6% opacity */
+  .poster-motif {
+    position: absolute; inset: 0;
+    opacity: 0.06;
+    pointer-events: none;
+  }
+  .poster-motif svg { width: 100%; height: 100%; display: block; }
+  /* Subtle film-grain overlay */
+  .poster::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      repeating-linear-gradient(45deg, transparent 0 2px, rgba(255,255,255,0.012) 2px 4px),
+      repeating-linear-gradient(-45deg, transparent 0 3px, rgba(255,255,255,0.008) 3px 6px);
+    pointer-events: none;
+  }
+  .poster-scene {
+    position: relative;
+    text-align: center;
+    color: rgba(255,255,255,0.55);
+    z-index: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 22px;
+  }
+  /* Big branded mark in the poster — uses the actual logo SVG (icon only) */
+  .poster-mark {
+    width: 56px;
+    height: auto;
+    aspect-ratio: 600 / 1120; /* icon-only crop ≈ 0.54 */
+    display: block;
+    opacity: 0.75;
+    filter: drop-shadow(0 8px 32px rgba(246,195,11,0.45));
+  }
+  /* Poster is always dark; counter-fills don't really apply (icon has none),
+     but set anyway for safety */
+  .poster-mark { --logo-counter: var(--poster-bg-a); }
+  @media (max-width: 480px) {
+    .poster-mark { width: 44px; }
+  }
+  .poster-scene .ts-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 14px;
+    background: rgba(0,0,0,0.5);
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.10);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: rgba(255,255,255,0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .poster-scene .ts-pill .dot {
+    width: 6px; height: 6px; border-radius: 999px;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+  }
+
+  /* Big center play button */
+  .play-cta {
+    position: absolute;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 72px; height: 72px;
+    border-radius: 999px;
+    background: rgba(246,195,11,0.96);
+    color: #1A1208;
+    border: none;
+    display: grid; place-items: center;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.06),
+      0 20px 50px rgba(0,0,0,0.5),
+      0 0 60px rgba(246,195,11,0.5);
+    transition: transform 140ms ease, background 140ms ease, box-shadow 140ms ease, opacity 220ms ease;
+    z-index: 3;
+  }
+  .play-cta:hover {
+    background: var(--accent-hover);
+    transform: translate(-50%, -50%) scale(1.04);
+  }
+  .play-cta:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 3px rgba(246,195,11,0.45),
+      0 20px 50px rgba(0,0,0,0.5);
+  }
+  .play-cta svg { width: 24px; height: 24px; }
+  @media (max-width: 480px) {
+    .play-cta { width: 60px; height: 60px; }
+    .play-cta svg { width: 20px; height: 20px; }
+  }
+
+  /* Controls strip */
+  .controls {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    padding: 24px 16px 14px;
+    background: linear-gradient(to top, rgba(0,0,0,0.6) 10%, rgba(0,0,0,0.0) 100%);
+    display: flex; flex-direction: column; gap: 8px;
+    color: rgba(255,255,255,0.92);
+    z-index: 2;
+  }
+  .scrubber {
+    position: relative;
+    height: 4px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .scrubber .filled {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 32%;
+    background: var(--accent);
+    border-radius: 999px;
+  }
+  .scrubber .buffered {
+    position: absolute; left: 0; top: 0; bottom: 0;
+    width: 58%;
+    background: rgba(255,255,255,0.28);
+    border-radius: 999px;
+  }
+  .scrubber .handle {
+    position: absolute;
+    left: 32%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 12px; height: 12px;
+    background: var(--accent);
+    border-radius: 999px;
+    box-shadow: 0 0 0 4px rgba(246,195,11,0.18), 0 2px 4px rgba(0,0,0,0.4);
+  }
+  .controls-row {
+    display: flex; align-items: center; gap: 14px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+  .controls-row .group { display: inline-flex; align-items: center; gap: 14px; }
+  .controls-row .ctrl-btn {
+    background: none; border: none; padding: 0; color: rgba(255,255,255,0.85);
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+    transition: color 120ms ease;
+  }
+  .controls-row .ctrl-btn:hover { color: #fff; }
+  .controls-row .time { color: rgba(255,255,255,0.7); }
+  .controls-row .time .cur { color: #fff; }
+  .controls-row .right { margin-left: auto; }
+
+  /* ─────────── Below player ─────────── */
+  .meta-block {
+    margin-top: 28px;
+    display: flex; flex-direction: column; gap: 20px;
+  }
+  @media (min-width: 768px) {
+    .meta-block {
+      margin-top: 32px;
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 32px;
+    }
+  }
+  .meta-block .title-area { flex: 1; min-width: 0; }
+  .clip-title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.6px;
+    line-height: 1.15;
+    color: var(--text-1);
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  @media (min-width: 768px) {
+    .clip-title { font-size: 30px; letter-spacing: -0.8px; line-height: 1.1; margin-bottom: 14px; }
+  }
+
+  .creator-row {
+    display: flex; align-items: center; gap: 12px;
+    flex-wrap: wrap;
+    color: var(--text-2);
+    font-size: 14px;
+  }
+  .creator-row .avatar {
+    width: 28px; height: 28px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #F6C30B 0%, #DFA800 100%);
+    color: #1A1208;
+    font-weight: 700; font-size: 12px;
+    display: grid; place-items: center;
+    flex-shrink: 0;
+  }
+  .creator-row .name { color: var(--text-1); font-weight: 500; }
+  .creator-row .sep {
+    width: 3px; height: 3px; border-radius: 999px;
+    background: var(--text-3);
+  }
+  .creator-row .meta { color: var(--text-2); }
+
+  .action-row {
+    display: flex; gap: 8px;
+    flex-shrink: 0;
+  }
+  @media (max-width: 767px) {
+    .action-row { width: 100%; }
+    .action-row .btn-ghost { flex: 1; }
+  }
+
+  /* ─────────── Try Pineapple card ─────────── */
+  .try-card {
+    margin-top: 36px;
+    background: var(--surface-card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 22px;
+    display: flex; align-items: center; gap: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: background-color 220ms ease, border-color 220ms ease;
+  }
+  /* Soft yellow wash always present */
+  .try-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(60% 80% at 100% 0%, rgba(246,195,11,0.08) 0%, transparent 60%),
+      radial-gradient(40% 60% at 0% 100%, rgba(42,137,57,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+  @media (min-width: 768px) {
+    .try-card { padding: 26px 30px; gap: 28px; margin-top: 44px; }
+  }
+  @media (max-width: 600px) {
+    .try-card { flex-direction: column; align-items: flex-start; gap: 16px; }
+  }
+
+  /* The Pineapple in the Try card — vector icon-only crop. Transparent
+     background; no tile / no mix-blend hacks needed thanks to the proper
+     SVG asset. */
+  .try-mark {
+    flex-shrink: 0;
+    width: 64px;
+    display: grid; place-items: center;
+    --logo-counter: var(--surface-card);
+  }
+  .try-mark .logo-icon {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 600 / 1120;
+    filter: drop-shadow(0 6px 24px rgba(246,195,11,0.18));
+  }
+  @media (min-width: 768px) {
+    .try-mark { width: 72px; }
+  }
+
+  .try-card .text-area { flex: 1; min-width: 0; position: relative; }
+  .try-card .headline {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-1);
+    letter-spacing: -0.3px;
+    margin: 0 0 4px;
+  }
+  .try-card .sub {
+    font-size: 14px;
+    color: var(--text-2);
+    margin: 0;
+  }
+  .try-card .btn-primary {
+    flex-shrink: 0;
+    position: relative;
+  }
+  @media (max-width: 600px) {
+    .try-card .btn-primary { width: 100%; }
+    .try-mark { width: 56px; }
+  }
+
+  /* ─────────── Footer ─────────── */
+  footer.foot {
+    border-top: 1px solid var(--footer-border);
+    padding: 20px 16px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.2px;
+    position: relative;
+    z-index: 1;
+  }
+  footer.foot a { color: var(--text-2); transition: color 140ms ease; }
+  footer.foot a:hover { color: var(--text-1); }
+  footer.foot .sep { margin: 0 8px; color: var(--border-strong); }
+
+  /* ─────────── Toast ─────────── */
+  .toast {
+    position: fixed;
+    bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: var(--toast-bg);
+    border: 1px solid var(--border-strong);
+    color: var(--toast-fg);
+    padding: 12px 18px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    font-weight: 500;
+    display: inline-flex; align-items: center; gap: 10px;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+    opacity: 0;
+    transition: opacity 200ms ease, transform 200ms ease;
+    z-index: 50;
+    pointer-events: none;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  .toast .dot {
+    width: 8px; height: 8px; border-radius: 999px;
+    background: var(--green);
+    box-shadow: 0 0 12px rgba(42,137,57,0.6);
+  }
+
+  /* ─────────── Aspect ratio variants ─────────── */
+  .player-wrap[data-aspect="9:16"] { aspect-ratio: 9 / 16; max-width: 380px; margin: 0 auto; }
+  .player-wrap[data-aspect="1:1"]  { aspect-ratio: 1 / 1;  max-width: 560px; margin: 0 auto; }
+  @media (min-width: 900px) {
+    main[data-orient="vertical"] .stage {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 48px;
+      align-items: start;
+    }
+    main[data-orient="vertical"] .player-wrap[data-aspect="9:16"] { max-width: 100%; margin: 0; }
+    main[data-orient="vertical"] .meta-block { margin-top: 0; flex-direction: column; gap: 24px; }
+    main[data-orient="vertical"] .action-row { width: 100%; }
+    main[data-orient="vertical"] .action-row .btn-ghost { flex: 1; }
+    main[data-orient="vertical"] .try-card { margin-top: 0; }
+  }
+
+  /* ─────────── Tweaks panel ─────────── */
+  .tweaks {
+    position: fixed;
+    right: 16px; bottom: 16px;
+    z-index: 40;
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  }
+  .tweaks .seg {
+    display: inline-flex;
+    background: var(--surface-2);
+    border-radius: 999px;
+    padding: 3px;
+  }
+  .tweaks .seg button {
+    border: none;
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 12px;
+    border-radius: 999px;
+    transition: background 140ms ease, color 140ms ease;
+    letter-spacing: -0.1px;
+    line-height: 1;
+  }
+  .tweaks .seg button.active {
+    background: var(--accent);
+    color: #1A1208;
+  }
+  .tweaks .divider {
+    width: 1px; height: 22px;
+    background: var(--border);
+  }
+  .tweaks .aspect-btn {
+    border: none;
+    background: transparent;
+    color: var(--text-2);
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    transition: color 140ms ease, background 140ms ease;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .tweaks .aspect-btn:hover { color: var(--text-1); background: var(--surface-2); }
+
+</style>
+</head>
+<body class="theme-dark">
+
+<!-- ───────── Header ───────── -->
+<header class="bar">
+  <div class="inner">
+    <a class="lockup" href="#" aria-label="Pineapple">
+      <!-- Icon-only crop of the vector logo -->
+      <svg data-logo class="logo-icon" viewBox="720 220 600 1120" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+      <!-- Wordmark crop -->
+      <svg data-logo class="logo-word" viewBox="350 1370 1400 340" preserveAspectRatio="xMinYMid meet" aria-hidden="true" aria-label="Pineapple"></svg>
+    </a>
+    <a href="#" class="btn btn-primary btn-header-cta" id="header-cta">
+      Get Pineapple
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M6 3l5 5-5 5"/>
+      </svg>
+    </a>
+  </div>
+</header>
+
+<!-- ───────── Main ───────── -->
+<main id="main" data-orient="horizontal">
+  <div class="stage">
+    <!-- Player -->
+    <div class="player-wrap" id="player" data-aspect="16:9" aria-label="Video player">
+      <div class="poster" aria-hidden="true">
+        <!-- Landing-page diamond motif as quiet texture -->
+        <div class="poster-motif" id="poster-motif"></div>
+        <div class="poster-scene">
+          <!-- Actual vector logo, icon-only crop -->
+          <svg data-logo class="poster-mark" viewBox="720 220 600 1120" preserveAspectRatio="xMidYMid meet" aria-hidden="true"></svg>
+          <div class="ts-pill">
+            <span class="dot"></span>
+            <span id="ts-pill-text">Best moment · 00:42</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="play-cta" id="play-cta" aria-label="Play clip">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <polygon points="6,3 21,12 6,21"/>
+        </svg>
+      </button>
+
+      <div class="controls">
+        <div class="scrubber" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="32">
+          <div class="buffered"></div>
+          <div class="filled"></div>
+          <div class="handle"></div>
+        </div>
+        <div class="controls-row">
+          <div class="group">
+            <button class="ctrl-btn" aria-label="Play">
+              <svg viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14,8 4,14"/></svg>
+            </button>
+            <button class="ctrl-btn" aria-label="Mute">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h2.5L9 3v10L5.5 10H3z"/>
+                <path d="M12 6c0.8 0.7 0.8 3.3 0 4"/>
+              </svg>
+            </button>
+            <span class="time"><span class="cur">00:42</span> / 02:14</span>
+          </div>
+          <div class="right">
+            <button class="ctrl-btn" aria-label="Settings">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="8" r="1.5"/>
+                <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M3.4 12.6l1.4-1.4M11.2 4.8l1.4-1.4"/>
+              </svg>
+            </button>
+            <button class="ctrl-btn" aria-label="Picture-in-picture">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="1.5" y="2.5" width="13" height="10" rx="1.5"/>
+                <rect x="8.5" y="7.5" width="5" height="4" rx="0.8" fill="currentColor"/>
+              </svg>
+            </button>
+            <button class="ctrl-btn" aria-label="Fullscreen">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M2 5V2h3M14 5V2h-3M2 11v3h3M14 11v3h-3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Meta + actions -->
+    <div class="meta-block">
+      <div class="title-area">
+        <h1 class="clip-title" id="clip-title">When Maya says &ldquo;pineapple&rdquo; mid-take</h1>
+        <div class="creator-row">
+          <div class="avatar">MG</div>
+          <span class="name" id="clip-creator">Maya G.</span>
+          <span class="sep"></span>
+          <span class="meta">2 hours ago</span>
+          <span class="sep"></span>
+          <span class="meta">12 views</span>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-ghost" id="copy-link" aria-label="Copy link">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6.5 9.5a3 3 0 0 0 4.2 0l2.1-2.1a3 3 0 0 0-4.2-4.2L7.5 4.3"/>
+            <path d="M9.5 6.5a3 3 0 0 0-4.2 0L3.2 8.6a3 3 0 0 0 4.2 4.2l1.1-1.1"/>
+          </svg>
+          <span>Copy link</span>
+        </button>
+        <button class="btn btn-ghost" id="share-btn" aria-label="Share">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 8v5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V8"/>
+            <path d="M8 10V2"/>
+            <path d="M5 5l3-3 3 3"/>
+          </svg>
+          <span>Share</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Try Pineapple CTA card -->
+    <aside class="try-card" aria-labelledby="try-headline">
+      <div class="try-mark" aria-hidden="true">
+        <svg data-logo class="logo-icon" viewBox="720 220 600 1120" preserveAspectRatio="xMidYMid meet"></svg>
+      </div>
+      <div class="text-area">
+        <h2 class="headline" id="try-headline">Find the moments. Skip the scrubbing.</h2>
+        <p class="sub">Pineapple finds the best moments in your footage and cuts them for you.</p>
+      </div>
+      <a href="#" class="btn btn-primary" id="try-cta">
+        Get Pineapple
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 3l5 5-5 5"/>
+        </svg>
+      </a>
+    </aside>
+  </div>
+</main>
+
+<!-- ───────── Footer ───────── -->
+<footer class="foot">
+  <span>Made with</span>
+  <a href="#">Pineapple<span style="color: var(--accent);">.</span></a>
+  <span class="sep">·</span>
+  <a href="#">pineapple.app</a>
+  <span class="sep">·</span>
+  <a href="#">Report</a>
+</footer>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <span class="dot"></span>
+  <span id="toast-text">Link copied</span>
+</div>
+
+<!-- ───────── Tweaks panel: theme + aspect ───────── -->
+<div class="tweaks" role="group" aria-label="Tweaks">
+  <div class="seg" role="tablist" aria-label="Theme">
+    <button id="theme-dark"  class="active" aria-pressed="true">Dark</button>
+    <button id="theme-light" aria-pressed="false">Light</button>
+  </div>
+  <div class="divider"></div>
+  <button class="aspect-btn" id="aspect-toggle" aria-label="Toggle aspect ratio">16:9</button>
+</div>
+
+<script>
+  // ─── Diamond motif (matches landing page) ───
+  function buildMotif(target, opacity) {
+    const cols = 12, rows = 8;
+    const tw = 30, th = 30;
+    const w = cols * tw, h = rows * th * 0.78;
+    const tiles = [];
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const x = c * tw + (r % 2 ? tw/2 : 0);
+        const y = r * th * 0.78;
+        const isGreen = ((r * 3 + c * 5) % 7 === 0);
+        const fill = isGreen ? '#2A8939' : '#F6C30B';
+        tiles.push(
+          `<rect x="${x}" y="${y}" width="${tw*0.85}" height="${tw*0.85}" transform="rotate(45 ${x + tw*0.425} ${y + tw*0.425})" fill="${fill}"/>`
+        );
+      }
+    }
+    target.innerHTML = `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="xMidYMid slice" style="opacity:${opacity}; width: 100%; height: 100%;">${tiles.join('')}</svg>`;
+  }
+  buildMotif(document.getElementById('poster-motif'), 1.0);
+
+  // ─── Load and inject the vector logo into every [data-logo] container ───
+  // The asset uses currentColor for the charcoal wordmark, so it themes
+  // automatically; --logo-counter fills the white interior holes of letters
+  // and is set per-context in CSS.
+  (async () => {
+    try {
+      const res = await fetch('assets/pineapple-logo.svg');
+      const text = await res.text();
+      const m = text.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
+      if (!m) return;
+      const inner = m[1];
+      document.querySelectorAll('[data-logo]').forEach(el => {
+        el.innerHTML = inner;
+      });
+    } catch (err) {
+      console.warn('Logo SVG load failed:', err);
+    }
+  })();
+
+  // ─── Theme toggle ───
+  const body = document.body;
+  const themeDarkBtn = document.getElementById('theme-dark');
+  const themeLightBtn = document.getElementById('theme-light');
+  function setTheme(t) {
+    body.classList.toggle('theme-dark', t === 'dark');
+    body.classList.toggle('theme-light', t === 'light');
+    themeDarkBtn.classList.toggle('active', t === 'dark');
+    themeLightBtn.classList.toggle('active', t === 'light');
+    themeDarkBtn.setAttribute('aria-pressed', String(t === 'dark'));
+    themeLightBtn.setAttribute('aria-pressed', String(t === 'light'));
+    // Update meta theme-color for browser chrome
+    document.querySelector('meta[name=theme-color]').setAttribute(
+      'content', t === 'dark' ? '#0A0A0E' : '#FAF8F5'
+    );
+  }
+  themeDarkBtn.addEventListener('click', () => setTheme('dark'));
+  themeLightBtn.addEventListener('click', () => setTheme('light'));
+
+  // ─── Mock player interactions ───
+  let playing = false;
+  const playCta = document.getElementById('play-cta');
+  const poster = document.querySelector('.poster');
+  const ctrlPlayBtn = document.querySelector('.ctrl-btn[aria-label="Play"]');
+
+  function setPlayState(p) {
+    playing = p;
+    playCta.style.opacity = playing ? '0' : '1';
+    playCta.style.pointerEvents = playing ? 'none' : 'auto';
+    poster.style.transition = 'opacity 300ms ease';
+    poster.style.opacity = playing ? '0.55' : '1';
+    ctrlPlayBtn.innerHTML = playing
+      ? '<svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="2" width="3" height="12"/><rect x="9.5" y="2" width="3" height="12"/></svg>'
+      : '<svg viewBox="0 0 16 16" fill="currentColor"><polygon points="4,2 14,8 4,14"/></svg>';
+  }
+  playCta.addEventListener('click', () => setPlayState(true));
+  ctrlPlayBtn.addEventListener('click', () => setPlayState(!playing));
+
+  // ─── Scrubber drag (mocked) ───
+  const scrub = document.querySelector('.scrubber');
+  const fillEl = scrub.querySelector('.filled');
+  const handleEl = scrub.querySelector('.handle');
+  const timeCur = document.querySelector('.controls-row .cur');
+  const TOTAL_SEC = 134;
+  function seekTo(pct) {
+    pct = Math.max(0, Math.min(1, pct));
+    fillEl.style.width = (pct * 100) + '%';
+    handleEl.style.left = (pct * 100) + '%';
+    const sec = Math.round(pct * TOTAL_SEC);
+    const m = Math.floor(sec / 60), s = sec % 60;
+    timeCur.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    scrub.setAttribute('aria-valuenow', Math.round(pct * 100));
+  }
+  function pctFromEvent(e) {
+    const rect = scrub.getBoundingClientRect();
+    const x = (e.clientX ?? e.touches?.[0]?.clientX) - rect.left;
+    return x / rect.width;
+  }
+  let dragging = false;
+  scrub.addEventListener('pointerdown', (e) => {
+    dragging = true;
+    seekTo(pctFromEvent(e));
+    scrub.setPointerCapture(e.pointerId);
+  });
+  scrub.addEventListener('pointermove', (e) => {
+    if (dragging) seekTo(pctFromEvent(e));
+  });
+  scrub.addEventListener('pointerup', () => { dragging = false; });
+
+  // ─── Copy / Share ───
+  const toast = document.getElementById('toast');
+  const toastText = document.getElementById('toast-text');
+  function showToast(msg) {
+    toastText.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => toast.classList.remove('show'), 1800);
+  }
+  document.getElementById('copy-link').addEventListener('click', async () => {
+    const url = 'https://pineapple.app/c/abc123';
+    try { await navigator.clipboard.writeText(url); } catch {}
+    showToast('Link copied');
+  });
+  document.getElementById('share-btn').addEventListener('click', async () => {
+    const data = {
+      title: 'Maya G. shared a clip',
+      text: 'When Maya says "pineapple" mid-take',
+      url: 'https://pineapple.app/c/abc123',
+    };
+    if (navigator.share) {
+      try { await navigator.share(data); } catch {}
+    } else {
+      try { await navigator.clipboard.writeText(data.url); } catch {}
+      showToast('Link copied');
+    }
+  });
+
+  // ─── Aspect-ratio toggle ───
+  const main = document.getElementById('main');
+  const player = document.getElementById('player');
+  const aspectBtn = document.getElementById('aspect-toggle');
+  const aspects = ['16:9', '9:16', '1:1'];
+  aspectBtn.addEventListener('click', () => {
+    const cur = player.getAttribute('data-aspect');
+    const next = aspects[(aspects.indexOf(cur) + 1) % aspects.length];
+    player.setAttribute('data-aspect', next);
+    main.setAttribute('data-orient', next === '16:9' ? 'horizontal' : 'vertical');
+    aspectBtn.textContent = next;
+  });
+
+  // ─── Keyboard shortcuts ───
+  document.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'INPUT') return;
+    if (e.code === 'Space') { e.preventDefault(); setPlayState(!playing); }
+    if (e.key === 'ArrowRight') { const cur = parseFloat(fillEl.style.width) / 100 || 0; seekTo(cur + 0.05); }
+    if (e.key === 'ArrowLeft')  { const cur = parseFloat(fillEl.style.width) / 100 || 0; seekTo(cur - 0.05); }
+  });
+</script>
+
+</body>
+</html>
