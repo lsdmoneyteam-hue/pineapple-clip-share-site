@@ -661,7 +661,7 @@
   <div class="stage">
     <!-- Player -->
     <div class="player-wrap" id="player" data-aspect="16:9" aria-label="Video player">
-      <video id="hls-video" playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;background:#000;display:none;"></video>
+      <video id="hls-video" playsinline preload="metadata" style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;background:#000;display:none;"></video>
       <div class="poster" aria-hidden="true">
         <!-- Landing-page diamond motif as quiet texture -->
         <div class="poster-motif" id="poster-motif"></div>
@@ -1011,8 +1011,9 @@
       const posterUrl  = `https://image.mux.com/${data.playback_id}/thumbnail.jpg?width=800&fit_mode=preserve`;
       const video      = document.getElementById('hls-video');
 
-      // Show poster in CSS poster div too
+      // Show poster in CSS poster div and on the video element
       document.querySelector('.poster').style.backgroundImage = `url(${posterUrl})`;
+      video.poster = posterUrl;
 
       video.style.display = 'block';
 
@@ -1061,6 +1062,67 @@
       scrub.addEventListener('pointerdown', () => {
         if (video.duration) video.currentTime = (parseFloat(fillEl.style.width) / 100) * video.duration;
       });
+
+      // Mute / unmute
+      const muteBtn = document.querySelector('.ctrl-btn[aria-label="Mute"]');
+      if (muteBtn) {
+        const muteIcon   = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 5.5v5h3l4 3V2.5L6 5.5H3zm10.2-.7a7 7 0 0 1 0 6.4l-1.1-.6a5.5 5.5 0 0 0 0-5.2l1.1-.6zm-2.2 1.2a3.5 3.5 0 0 1 0 4l-1-.6a2 2 0 0 0 0-2.8l1-.6z"/></svg>';
+        const unmuteIcon = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 5.5v5h3l4 3V2.5L6 5.5H3zm9.2 1.4 1-1a.75.75 0 1 1 1.1 1L13.1 8l1.2 1.1a.75.75 0 1 1-1 1.1L12 9l-1.1 1.1a.75.75 0 1 1-1-1.1L11 8l-1.1-1.1a.75.75 0 1 1 1-1.1L12 7z"/></svg>';
+        function updateMuteIcon() {
+          muteBtn.innerHTML = video.muted ? unmuteIcon : muteIcon;
+          muteBtn.setAttribute('aria-label', video.muted ? 'Unmute' : 'Mute');
+        }
+        updateMuteIcon();
+        muteBtn.addEventListener('click', () => {
+          video.muted = !video.muted;
+          updateMuteIcon();
+        });
+      }
+
+      // Picture-in-picture
+      const pipBtn = document.querySelector('.ctrl-btn[aria-label="Picture-in-picture"]');
+      if (pipBtn) {
+        if (!document.pictureInPictureEnabled) {
+          pipBtn.style.display = 'none';
+        } else {
+          pipBtn.addEventListener('click', async () => {
+            try {
+              if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+              } else {
+                await video.requestPictureInPicture();
+              }
+            } catch (e) {
+              console.warn('[share-page] PiP failed:', e);
+            }
+          });
+        }
+      }
+
+      // Fullscreen
+      const fsBtn = document.querySelector('.ctrl-btn[aria-label="Fullscreen"]');
+      if (fsBtn) {
+        const fsEnterIcon = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 1.5h4v1.5h-2.5v2.5h-1.5v-4zm9 0h4v4h-1.5v-2.5h-2.5v-1.5zm-9 9h1.5v2.5h2.5v1.5h-4v-4zm11.5 2.5h-2.5v-2.5h-1.5v4h4v-1.5z"/></svg>';
+        const fsExitIcon  = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5v2.5h-2.5v1.5h4v-4h-1.5zm7.5 0h-1.5v4h4v-1.5h-2.5v-2.5zm-7.5 9h-2.5v1.5h4v-4h-1.5v2.5zm9-2.5h-1.5v4h4v-1.5h-2.5v-2.5z"/></svg>';
+        function updateFsIcon() {
+          const inFs = !!document.fullscreenElement;
+          fsBtn.innerHTML = inFs ? fsExitIcon : fsEnterIcon;
+          fsBtn.setAttribute('aria-label', inFs ? 'Exit fullscreen' : 'Fullscreen');
+        }
+        updateFsIcon();
+        fsBtn.addEventListener('click', async () => {
+          try {
+            if (document.fullscreenElement) {
+              await document.exitFullscreen();
+            } else {
+              await (video.closest('.player') || video).requestFullscreen();
+            }
+          } catch (e) {
+            console.warn('[share-page] fullscreen failed:', e);
+          }
+        });
+        document.addEventListener('fullscreenchange', updateFsIcon);
+      }
     }
   })();
 </script>
