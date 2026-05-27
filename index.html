@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-<title>Maya G. shared a clip · Pineapple</title>
+<title>Pineapple — Loading…</title>
 <meta name="theme-color" content="#0A0A0E"/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -661,6 +661,7 @@
   <div class="stage">
     <!-- Player -->
     <div class="player-wrap" id="player" data-aspect="16:9" aria-label="Video player">
+      <video id="hls-video" playsinline style="position:absolute;inset:0;width:100%;height:100%;object-fit:contain;z-index:1;background:#000;display:none;"></video>
       <div class="poster" aria-hidden="true">
         <!-- Landing-page diamond motif as quiet texture -->
         <div class="poster-motif" id="poster-motif"></div>
@@ -725,10 +726,10 @@
     <!-- Meta + actions -->
     <div class="meta-block">
       <div class="title-area">
-        <h1 class="clip-title" id="clip-title">When Maya says &ldquo;pineapple&rdquo; mid-take</h1>
+        <h1 class="clip-title" id="clip-title">Loading…</h1>
         <div class="creator-row">
-          <div class="avatar">MG</div>
-          <span class="name" id="clip-creator">Maya G.</span>
+          <div class="avatar" id="clip-avatar"></div>
+          <span class="name" id="clip-creator"></span>
           <span class="sep"></span>
           <span class="meta">2 hours ago</span>
           <span class="sep"></span>
@@ -919,21 +920,16 @@
     clearTimeout(showToast._t);
     showToast._t = setTimeout(() => toast.classList.remove('show'), 1800);
   }
+  const pageUrl = window.location.href;
   document.getElementById('copy-link').addEventListener('click', async () => {
-    const url = 'https://pineapple.app/c/abc123';
-    try { await navigator.clipboard.writeText(url); } catch {}
+    try { await navigator.clipboard.writeText(pageUrl); } catch {}
     showToast('Link copied');
   });
   document.getElementById('share-btn').addEventListener('click', async () => {
-    const data = {
-      title: 'Maya G. shared a clip',
-      text: 'When Maya says "pineapple" mid-take',
-      url: 'https://pineapple.app/c/abc123',
-    };
     if (navigator.share) {
-      try { await navigator.share(data); } catch {}
+      try { await navigator.share({ title: document.title, url: pageUrl }); } catch {}
     } else {
-      try { await navigator.clipboard.writeText(data.url); } catch {}
+      try { await navigator.clipboard.writeText(pageUrl); } catch {}
       showToast('Link copied');
     }
   });
@@ -958,7 +954,117 @@
     if (e.key === 'ArrowRight') { const cur = parseFloat(fillEl.style.width) / 100 || 0; seekTo(cur + 0.05); }
     if (e.key === 'ArrowLeft')  { const cur = parseFloat(fillEl.style.width) / 100 || 0; seekTo(cur - 0.05); }
   });
+
+  // ─── Share page hydration via resolve-share-token ───────────────────────────
+  (async () => {
+    const token = new URLSearchParams(window.location.search).get('t');
+
+    if (!token) {
+      document.getElementById('clip-title').textContent = 'Invalid share link';
+      document.getElementById('clip-creator').textContent = 'This link appears to be broken.';
+      return;
+    }
+
+    let data;
+    try {
+      const res = await fetch(
+        `https://qrabwluqxcjfhrfshico.supabase.co/functions/v1/resolve-share-token?t=${encodeURIComponent(token)}`,
+        { headers: { 'apikey': 'sb_publishable_e_mNL4Faq0i55Vv-LEev2w_QwRUxVLL' } }
+      );
+      if (res.status === 404 || res.status === 425) {
+        document.getElementById('clip-title').textContent = 'This link is no longer available';
+        document.getElementById('clip-creator').textContent = 'The clip may have been removed.';
+        return;
+      }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      data = await res.json();
+    } catch (err) {
+      console.error('[share-page] resolve-share-token failed:', err);
+      document.getElementById('clip-title').textContent = 'Could not load clip';
+      document.getElementById('clip-creator').textContent = 'Please check your connection and try again.';
+      return;
+    }
+
+    // Populate text
+    const title = data.title || 'Untitled';
+    document.title = `${title} · Pineapple`;
+    document.getElementById('clip-title').textContent = title;
+
+    const durationSec = data.duration_sec ?? 0;
+    const durM = Math.floor(durationSec / 60), durS = Math.round(durationSec % 60);
+    const durStr = `${String(durM).padStart(2,'0')}:${String(durS).padStart(2,'0')}`;
+    document.getElementById('ts-pill-text').textContent = `${data.kind === 'composition' ? 'Composition' : 'Best moment'} · ${durStr}`;
+    document.querySelector('.controls-row .time').innerHTML =
+      `<span class="cur">00:00</span> / ${durStr}`;
+
+    // Set aspect ratio
+    const aspect = data.aspect_ratio || '16:9';
+    const playerEl = document.getElementById('player');
+    const mainEl   = document.getElementById('main');
+    playerEl.setAttribute('data-aspect', aspect);
+    mainEl.setAttribute('data-orient', aspect === '16:9' ? 'horizontal' : 'vertical');
+    document.getElementById('aspect-toggle').textContent = aspect;
+
+    // Wire up real video player
+    if (data.playback_id) {
+      const hlsUrl     = `https://stream.mux.com/${data.playback_id}.m3u8`;
+      const posterUrl  = `https://image.mux.com/${data.playback_id}/thumbnail.jpg?width=800&fit_mode=preserve`;
+      const video      = document.getElementById('hls-video');
+
+      // Show poster in CSS poster div too
+      document.querySelector('.poster').style.backgroundImage = `url(${posterUrl})`;
+
+      video.style.display = 'block';
+
+      // Override play button to use real video
+      playCta.removeEventListener('click', () => setPlayState(true));
+      playCta.addEventListener('click', () => {
+        video.play().catch(() => {});
+        setPlayState(true);
+      });
+      ctrlPlayBtn.addEventListener('click', () => {
+        if (video.paused) { video.play().catch(() => {}); setPlayState(true); }
+        else              { video.pause();                 setPlayState(false); }
+      });
+
+      // HLS setup
+      const setupHls = () => {
+        if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+          const hls = new Hls();
+          hls.loadSource(hlsUrl);
+          hls.attachMedia(video);
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          // Safari native HLS
+          video.src = hlsUrl;
+        }
+      };
+
+      if (typeof Hls !== 'undefined') {
+        setupHls();
+      } else {
+        // HLS.js not yet loaded — wait for it
+        document.getElementById('hlsjs-script').addEventListener('load', setupHls);
+      }
+
+      // Sync real video time to scrubber
+      video.addEventListener('timeupdate', () => {
+        if (!video.duration) return;
+        const pct = video.currentTime / video.duration;
+        fillEl.style.width = (pct * 100) + '%';
+        handleEl.style.left = (pct * 100) + '%';
+        const sec = Math.floor(video.currentTime);
+        const m = Math.floor(sec / 60), s = sec % 60;
+        timeCur.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      });
+
+      // Seek on scrubber interaction
+      scrub.addEventListener('pointerdown', () => {
+        if (video.duration) video.currentTime = (parseFloat(fillEl.style.width) / 100) * video.duration;
+      });
+    }
+  })();
 </script>
+<script id="hlsjs-script" src="https://cdn.jsdelivr.net/npm/hls.js@1" async></script>
 
 </body>
 </html>
