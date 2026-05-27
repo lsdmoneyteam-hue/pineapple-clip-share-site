@@ -1063,6 +1063,23 @@
         if (video.duration) video.currentTime = (parseFloat(fillEl.style.width) / 100) * video.duration;
       });
 
+      // Brightness cycle
+      const brightnessBtn = document.querySelector('.ctrl-btn[aria-label="Settings"]');
+      if (brightnessBtn) {
+        const brightnessStates = [
+          { filter: '',                  label: 'Brightness normal'   },
+          { filter: 'brightness(1.2)',   label: 'Brightness brighter' },
+          { filter: 'brightness(0.8)',   label: 'Brightness dimmer'   },
+        ];
+        let brightnessIdx = 0;
+        brightnessBtn.addEventListener('click', () => {
+          brightnessIdx = (brightnessIdx + 1) % brightnessStates.length;
+          const { filter, label } = brightnessStates[brightnessIdx];
+          video.style.filter = filter;
+          brightnessBtn.setAttribute('aria-label', label);
+        });
+      }
+
       // Mute / unmute
       const muteBtn = document.querySelector('.ctrl-btn[aria-label="Mute"]');
       if (muteBtn) {
