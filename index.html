@@ -351,7 +351,7 @@
   }
   .scrubber .filled {
     position: absolute; left: 0; top: 0; bottom: 0;
-    width: 32%;
+    width: 0%;
     background: var(--accent);
     border-radius: 999px;
   }
@@ -363,12 +363,22 @@
   }
   .scrubber .handle {
     position: absolute;
-    left: 32%; top: 50%;
+    left: 0%; top: 50%;
     transform: translate(-50%, -50%);
     width: 12px; height: 12px;
     background: var(--accent);
     border-radius: 999px;
     box-shadow: 0 0 0 4px rgba(246,195,11,0.18), 0 2px 4px rgba(0,0,0,0.4);
+  }
+  .scrubber .marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 3px; height: 12px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 999px;
+    box-shadow: 0 0 6px rgba(255,255,255,0.5);
+    pointer-events: none;
   }
   .controls-row {
     display: flex; align-items: center; gap: 14px;
@@ -579,6 +589,16 @@
     main[data-orient="vertical"] .try-card { margin-top: 0; }
   }
 
+  /* ─────────── Player overlay fade ─────────── */
+  .poster {
+    transition: opacity 300ms ease;
+    pointer-events: auto;
+  }
+  .poster.dismissed {
+    opacity: 0;
+    pointer-events: none;
+  }
+
   /* ─────────── Tweaks panel ─────────── */
   .tweaks {
     position: fixed;
@@ -682,10 +702,11 @@
       </button>
 
       <div class="controls">
-        <div class="scrubber" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="32">
+        <div class="scrubber" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
           <div class="buffered"></div>
-          <div class="filled"></div>
-          <div class="handle"></div>
+          <div class="filled" style="width:0%"></div>
+          <div class="handle" style="left:0%"></div>
+          <div class="marker" id="scrubber-marker" style="display:none"></div>
         </div>
         <div class="controls-row">
           <div class="group">
@@ -698,7 +719,7 @@
                 <path d="M12 6c0.8 0.7 0.8 3.3 0 4"/>
               </svg>
             </button>
-            <span class="time"><span class="cur">00:42</span> / 02:14</span>
+            <span class="time"><span class="cur">00:00</span> / <span id="dur-label">--:--</span></span>
           </div>
           <div class="right">
             <button class="ctrl-btn" aria-label="Settings">
@@ -991,11 +1012,19 @@
     document.getElementById('clip-title').textContent = title;
 
     const durationSec = data.duration_sec ?? 0;
-    const durM = Math.floor(durationSec / 60), durS = Math.round(durationSec % 60);
-    const durStr = `${String(durM).padStart(2,'0')}:${String(durS).padStart(2,'0')}`;
-    document.getElementById('ts-pill-text').textContent = `${data.kind === 'composition' ? 'Composition' : 'Best moment'} · ${durStr}`;
-    document.querySelector('.controls-row .time').innerHTML =
-      `<span class="cur">00:00</span> / ${durStr}`;
+    const markerSec   = data.marker_sec ?? null;
+    function fmtTimePill(sec) {
+      const s = Math.floor(sec); const m = Math.floor(s / 60);
+      return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+    }
+    const kindLabel = data.kind === 'composition' ? 'Composition' : 'Best moment';
+    const pillTime  = markerSec != null ? ` · ${fmtTimePill(markerSec)}` : '';
+    document.getElementById('ts-pill-text').textContent = `${kindLabel}${pillTime}`;
+    // Duration label wired via loadedmetadata; set a fallback from API if available
+    if (durationSec > 0) {
+      const durEl = document.getElementById('dur-label');
+      if (durEl) durEl.textContent = fmtTimePill(durationSec);
+    }
 
     // Set aspect ratio
     const aspect = data.aspect_ratio || '16:9';
@@ -1011,9 +1040,18 @@
       const posterUrl  = `https://image.mux.com/${data.playback_id}/thumbnail.jpg?width=800&fit_mode=preserve`;
       const video      = document.getElementById('hls-video');
 
-      // Show poster in CSS poster div and on the video element
-      document.querySelector('.poster').style.backgroundImage = `url(${posterUrl})`;
-      video.poster = posterUrl;
+      // Use Mux thumbnail only for the CSS .poster background; do NOT set
+      // video.poster so the branded overlay div stays on top uninterrupted.
+      const posterEl = document.querySelector('.poster');
+      posterEl.style.backgroundImage = `url(${posterUrl})`;
+
+      // Dismiss overlay once (permanently) on first play
+      video.addEventListener('play', () => {
+        posterEl.classList.add('dismissed');
+      }, { once: true });
+
+      // Make the overlay clickable to start playback
+      posterEl.addEventListener('click', () => { video.play().catch(() => {}); });
 
       video.style.display = 'block';
 
@@ -1046,6 +1084,24 @@
         // HLS.js not yet loaded — wait for it
         document.getElementById('hlsjs-script').addEventListener('load', setupHls);
       }
+
+      // Duration label + marker pip once metadata loads
+      const durLabel = document.getElementById('dur-label');
+      const markerEl = document.getElementById('scrubber-marker');
+      function fmtTime(sec) {
+        const s = Math.floor(sec); const m = Math.floor(s / 60);
+        return `${String(m).padStart(2,'0')}:${String(s % 60).padStart(2,'0')}`;
+      }
+      video.addEventListener('loadedmetadata', () => {
+        if (durLabel) durLabel.textContent = fmtTime(video.duration);
+        // Position marker at marker_sec / duration if available
+        const markerSec = data.marker_sec ?? data.duration_sec ?? null;
+        if (markerEl && markerSec != null && video.duration > 0) {
+          const pct = Math.min(1, markerSec / video.duration) * 100;
+          markerEl.style.left = pct + '%';
+          markerEl.style.display = 'block';
+        }
+      });
 
       // Sync real video time to scrubber
       video.addEventListener('timeupdate', () => {
@@ -1080,19 +1136,32 @@
         });
       }
 
-      // Mute / unmute
+      // Volume — 4-state stepped control
       const muteBtn = document.querySelector('.ctrl-btn[aria-label="Mute"]');
       if (muteBtn) {
-        const muteIcon   = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 5.5v5h3l4 3V2.5L6 5.5H3zm10.2-.7a7 7 0 0 1 0 6.4l-1.1-.6a5.5 5.5 0 0 0 0-5.2l1.1-.6zm-2.2 1.2a3.5 3.5 0 0 1 0 4l-1-.6a2 2 0 0 0 0-2.8l1-.6z"/></svg>';
-        const unmuteIcon = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 5.5v5h3l4 3V2.5L6 5.5H3zm9.2 1.4 1-1a.75.75 0 1 1 1.1 1L13.1 8l1.2 1.1a.75.75 0 1 1-1 1.1L12 9l-1.1 1.1a.75.75 0 1 1-1-1.1L11 8l-1.1-1.1a.75.75 0 1 1 1-1.1L12 7z"/></svg>';
-        function updateMuteIcon() {
-          muteBtn.innerHTML = video.muted ? unmuteIcon : muteIcon;
-          muteBtn.setAttribute('aria-label', video.muted ? 'Unmute' : 'Mute');
+        // full | muted | low | medium
+        const volStates = [
+          { volume: 1.0, muted: false, label: 'Volume full',
+            icon: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 5.5v5h3l4 3V2.5L6 5.5H3zm10.2-.7a7 7 0 0 1 0 6.4l-1.1-.6a5.5 5.5 0 0 0 0-5.2l1.1-.6zm-2.2 1.2a3.5 3.5 0 0 1 0 4l-1-.6a2 2 0 0 0 0-2.8l1-.6z"/></svg>' },
+          { volume: 1.0, muted: true,  label: 'Muted',
+            icon: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 5.5v5h3l4 3V2.5L6 5.5H3zm9.2 1.4 1-1a.75.75 0 1 1 1.1 1L13.1 8l1.2 1.1a.75.75 0 1 1-1 1.1L12 9l-1.1 1.1a.75.75 0 1 1-1-1.1L11 8l-1.1-1.1a.75.75 0 1 1 1-1.1L12 7z"/></svg>' },
+          { volume: 0.3, muted: false, label: 'Volume low',
+            icon: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 5.5v5h3l4 3V2.5L6 5.5H3zm8-.7a5.5 5.5 0 0 1 0 6.4l-1.1-.6a4 4 0 0 0 0-5.2l1.1-.6z"/></svg>' },
+          { volume: 0.6, muted: false, label: 'Volume medium',
+            icon: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M3 5.5v5h3l4 3V2.5L6 5.5H3zm8.2-.7a7 7 0 0 1 0 6.4l-1.1-.6a5.5 5.5 0 0 0 0-5.2l1.1-.6zm-2.2 1.2a3.5 3.5 0 0 1 0 4l-1-.6a2 2 0 0 0 0-2.8l1-.6z"/></svg>' },
+        ];
+        let volIdx = 0;
+        function applyVolState() {
+          const s = volStates[volIdx];
+          video.volume = s.volume;
+          video.muted  = s.muted;
+          muteBtn.innerHTML = s.icon;
+          muteBtn.setAttribute('aria-label', s.label);
         }
-        updateMuteIcon();
+        applyVolState();
         muteBtn.addEventListener('click', () => {
-          video.muted = !video.muted;
-          updateMuteIcon();
+          volIdx = (volIdx + 1) % volStates.length;
+          applyVolState();
         });
       }
 
